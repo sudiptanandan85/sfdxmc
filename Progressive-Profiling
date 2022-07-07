@@ -1,0 +1,93 @@
+<!--Declaring Ampscript variable -->
+%%[
+var @Page1,@CookieID,@Page2
+]%%
+<!--Progressive Profile Logic Starts-->
+<script runat=server>
+    Platform.Load("Core", "1.1.1");
+	var cookie = Platform.Request.GetCookieValue("SFMCCookie"); //Get the cookie value if its present
+	Variable.SetValue("@CookieID",cookie);  //Set the cookie value
+	var CheckCookie = DataExtension.Init("Progressive Profiling");  
+	var CheckCookieRow = CheckCookie.Rows.Lookup(["CookieID"],[cookie]); //Check if cookie is present in data extension
+	if(CheckCookieRow){
+	Variable.SetValue("@Page2","Next"); //Set the Page 2 if the cookie value is present in data extension
+	}
+	else{
+        if( !cookie || cookie == "" ) {
+            set(); //If there is no cookie set a cookie
+        } 
+		}		
+		function set() {
+        var d = new Date("Fri, 31 Dec 9999 23:59:59 GMT");  //Set a longer date so that cookies can be stored longer time
+		var today = new Date();
+		var SFMCCookieValue = "";
+		SFMCCookieValue += "SFMCCookieValue";
+		SFMCCookieValue += today;		//Set Cookie value combination of SFMCCookie Value + today and to be stored in data extension
+        Platform.Response.SetCookie("SFMCCookie",SFMCCookieValue,d); //Set the cookie value
+		Variable.SetValue("@Page1","add");		
+    }		
+</script>
+<!--If customer submitted the form-->
+%%[
+IF RequestParameter("submitted") == "submitted"  Then
+Set @Email = RequestParameter("email")
+Set @firstname = RequestParameter("firstname")
+Set @lastname = RequestParameter("lastname")
+Set @CookieID = RequestParameter("CookieID")
+set @upsertdataex = UpsertDE('Progressive Profiling',1,'email',@Email,'firstname',@firstname,'lastname',@lastname,'CookieID',@CookieID)  //Upsert all the value in data extension 
+Set @showThankYou = "Yes"
+EndIF
+]%%
+
+<!--If customer filled the form show different section next time-->
+%%[
+If @Page2 == "Next" Then
+]%%
+<form action="%%=RequestParameter('PAGEURL')=%%" method="POST">
+  <label for="CompanyName">Company Name</label><br>
+  <input type="text" id="CompanyName" name="CompanyName" value=""><br>
+  <label for="Service">Do you Like Our Service </label><br>
+  <input type="text" id="Service" name="Service" value=""><br>
+  <br>
+  <input id="submitted" name="submitted" type="hidden" value="submitted">
+  <input type="submit" value="Submit">
+</form> 
+%%[EndIF]%%
+
+<!--If customer didn't fill the form but visits the same page-->
+%%[ If @Page1 != "add" AND @Page2 != "Next" AND @showThankYou != "Yes" Then ]%%
+Welcome Back! <br>
+<form action="%%=RequestParameter('PAGEURL')=%%" method="POST">
+  <label for="firstname">First name:</label><br>
+  <input type="text" id="firstname" name="firstname" value=""><br>
+  <label for="lastname">Last name:</label><br>
+  <input type="text" id="lastname" name="lastname" value=""><br>
+  <label for="email">Email:</label><br>
+  <input type="email" id="email" name="email" value=""><br>
+  <br>
+  <input id="CookieID" name="CookieID" type="hidden" value="%%=v(@CookieID)=%%">
+  <input id="submitted" name="submitted" type="hidden" value="submitted">
+  <input type="submit" value="Submit">
+</form> 
+%%[EndIF]%%
+
+<!--Customers comes to the form for first time-->
+%%[ If @Page1 == "add" and @showThankYou != "Yes" Then ]%%
+<form action="%%=RequestParameter('PAGEURL')=%%" method="POST">
+  <label for="firstname">First name:</label><br>
+  <input type="text" id="firstname" name="firstname" value=""><br>
+  <label for="lastname">Last name:</label><br>
+  <input type="text" id="lastname" name="lastname" value=""><br>
+  <label for="email">Email:</label><br>
+  <input type="email" id="email" name="email" value=""><br>
+  <br>
+  <input id="CookieID" name="CookieID" type="hidden" value="%%=v(@CookieID)=%%">
+  <input id="submitted" name="submitted" type="hidden" value="submitted">
+  <input type="submit" value="Submit">
+</form> 
+%%[EndIF]%%
+
+<!--Show Thank You Page Post Submit-->
+%%[ If @showThankYou == "Yes" Then ]%%
+<H2> </H2>
+%%[EndIF]%%
